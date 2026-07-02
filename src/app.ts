@@ -1,7 +1,9 @@
 import cors from "cors";
 import express, { NextFunction, Request, Response } from "express";
 
+import "./@types/express";
 import { swaggerRoutes } from "./docs/swagger.routes";
+import { authRoutes } from "./modules/auth/auth.routes";
 import { contentRoutes } from "./modules/content/content.routes";
 import { healthRoutes } from "./modules/health/health.routes";
 import { AppError } from "./shared/errors/AppError";
@@ -19,6 +21,7 @@ app.get("/", (_request: Request, response: Response) => {
 
 app.use("/api/content", contentRoutes);
 app.use("/api/health", healthRoutes);
+app.use("/auth", authRoutes);
 app.use("/api", swaggerRoutes);
 
 app.use((error: Error, _request: Request, response: Response, _next: NextFunction) => {

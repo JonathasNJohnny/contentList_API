@@ -22,4 +22,10 @@ export const env = {
   openLibrarySearchUrl:
     process.env.VITE_OPEN_LIBRARY_SEARCH_URL ??
     "https://openlibrary.org/search.json",
+  smtpHost: process.env.SMTP_HOST,
+  smtpPort: Number(process.env.SMTP_PORT) || 587,
+  smtpUser: process.env.SMTP_USER,
+  smtpPass: process.env.SMTP_PASS,
+  jwtSecret: process.env.JWT_SECRET,
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "1d",
 };
