@@ -29,3 +29,7 @@ export type ContentQuery = {
   category: ContentCategory;
   page: number;
 };
+
+export type ContentSearchQuery = ContentQuery & {
+  query: string;
+};

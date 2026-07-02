@@ -36,6 +36,16 @@ function normalizePage(value: unknown) {
   return page;
 }
 
+function normalizeSearchQuery(value: unknown) {
+  const query = String(value ?? "").trim();
+
+  if (!query) {
+    throw new AppError("Parametro query e obrigatorio.", 400);
+  }
+
+  return query;
+}
+
 export const contentController = {
   async index(request: Request, response: Response) {
     const result = await contentService.list({
@@ -46,9 +56,29 @@ export const contentController = {
     response.json(result);
   },
 
+  async search(request: Request, response: Response) {
+    const result = await contentService.search({
+      category: normalizeCategory(request.query.category),
+      query: normalizeSearchQuery(request.query.query),
+      page: normalizePage(request.query.page)
+    });
+
+    response.json(result);
+  },
+
   async showByCategory(request: Request, response: Response) {
     const result = await contentService.list({
       category: normalizeCategory(request.params.category),
+      page: normalizePage(request.params.page ?? request.query.page)
+    });
+
+    response.json(result);
+  },
+
+  async searchByCategory(request: Request, response: Response) {
+    const result = await contentService.search({
+      category: normalizeCategory(request.params.category),
+      query: normalizeSearchQuery(request.query.query),
       page: normalizePage(request.params.page ?? request.query.page)
     });
 

@@ -19,8 +19,8 @@ export async function getRedisClient() {
       url: env.redisUrl,
       socket: {
         connectTimeout: 500,
-        reconnectStrategy: false
-      }
+        reconnectStrategy: false,
+      },
     });
     client.on("error", (error) => {
       console.warn("Redis unavailable:", error.message);
@@ -34,7 +34,7 @@ export async function getRedisClient() {
         client.connect(),
         new Promise((_, reject) => {
           setTimeout(() => reject(new Error("Redis connection timeout")), 800);
-        })
+        }),
       ]);
     } catch {
       client = null;
@@ -62,7 +62,11 @@ export async function getCachedJson<T>(key: string): Promise<T | null> {
   }
 }
 
-export async function setCachedJson<T>(key: string, value: T, ttlSeconds: number) {
+export async function setCachedJson<T>(
+  key: string,
+  value: T,
+  ttlSeconds: number,
+) {
   try {
     const redis = await getRedisClient();
 

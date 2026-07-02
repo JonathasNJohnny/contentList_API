@@ -5,120 +5,26 @@ export const openApiDocument: OpenAPIV3.Document = {
   info: {
     title: "ContentList API",
     version: "1.0.0",
-    description: "API para listar conteudos de animes, mangas, filmes, series, livros e jogos."
+    description:
+      "API para listar conteudos de animes, mangas, filmes, series, livros e jogos.",
   },
   servers: [
     {
-      url: "http://localhost:3003",
-      description: "Local"
-    }
+      url: "http://localhost:3003/api/content",
+      description: "Local (Prefixo da rota de conteúdo)",
+    },
   ],
   tags: [
     {
       name: "Content",
-      description: "Listagem paginada de conteudos"
+      description: "Listagem paginada de conteudos",
     },
-    {
-      name: "Health",
-      description: "Status da API e dependencias"
-    }
   ],
   paths: {
-    "/": {
+    // Corresponde a: contentRoutes.get("/:category/search/:page")
+    "/{category}/search/{page}": {
       get: {
-        summary: "Mensagem raiz da API",
-        tags: ["Health"],
-        responses: {
-          "200": {
-            description: "API em execucao",
-            content: {
-              "application/json": {
-                schema: {
-                  type: "object",
-                  properties: {
-                    message: {
-                      type: "string",
-                      example: "ContentList API is running"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/health": {
-      get: {
-        summary: "Consulta status da API",
-        tags: ["Health"],
-        responses: {
-          "200": {
-            description: "Status da API e dependencias",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/HealthResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/content": {
-      get: {
-        summary: "Lista conteudos por categoria",
-        tags: ["Content"],
-        parameters: [
-          {
-            name: "category",
-            in: "query",
-            required: false,
-            schema: {
-              $ref: "#/components/schemas/ContentCategory"
-            },
-            description: "Categoria desejada. O padrao e todos.",
-            example: "animes"
-          },
-          {
-            name: "page",
-            in: "query",
-            required: false,
-            schema: {
-              type: "integer",
-              minimum: 1,
-              default: 1
-            },
-            description: "Pagina da categoria."
-          }
-        ],
-        responses: {
-          "200": {
-            description: "Conteudos encontrados",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/LoadResult"
-                }
-              }
-            }
-          },
-          "400": {
-            $ref: "#/components/responses/BadRequest"
-          },
-          "404": {
-            $ref: "#/components/responses/NotFound"
-          },
-          "500": {
-            $ref: "#/components/responses/InternalServerError"
-          }
-        }
-      }
-    },
-    "/api/content/{category}": {
-      get: {
-        summary: "Lista conteudos por categoria via path",
+        summary: "Busca conteudos por categoria e pagina via path",
         tags: ["Content"],
         parameters: [
           {
@@ -126,20 +32,31 @@ export const openApiDocument: OpenAPIV3.Document = {
             in: "path",
             required: true,
             schema: {
-              $ref: "#/components/schemas/ContentCategory"
+              $ref: "#/components/schemas/ContentCategory",
             },
-            example: "animes"
+            example: "filmes",
           },
           {
             name: "page",
-            in: "query",
-            required: false,
+            in: "path",
+            required: true,
             schema: {
               type: "integer",
               minimum: 1,
-              default: 1
-            }
-          }
+            },
+            example: 1,
+          },
+          {
+            name: "query",
+            in: "query",
+            required: true,
+            schema: {
+              type: "string",
+              minLength: 1,
+            },
+            description: "Texto usado na busca do provedor externo.",
+            example: "matrix",
+          },
         ],
         responses: {
           "200": {
@@ -147,24 +64,28 @@ export const openApiDocument: OpenAPIV3.Document = {
             content: {
               "application/json": {
                 schema: {
-                  $ref: "#/components/schemas/LoadResult"
-                }
-              }
-            }
+                  $ref: "#/components/schemas/LoadResult",
+                },
+              },
+            },
           },
           "400": {
-            $ref: "#/components/responses/BadRequest"
+            $ref: "#/components/responses/BadRequest",
           },
           "404": {
-            $ref: "#/components/responses/NotFound"
+            $ref: "#/components/responses/NotFound",
+          },
+          "503": {
+            $ref: "#/components/responses/ServiceUnavailable",
           },
           "500": {
-            $ref: "#/components/responses/InternalServerError"
-          }
-        }
-      }
+            $ref: "#/components/responses/InternalServerError",
+          },
+        },
+      },
     },
-    "/api/content/{category}/{page}": {
+    // Corresponde a: contentRoutes.get("/:category/:page")
+    "/{category}/{page}": {
       get: {
         summary: "Lista conteudos por categoria e pagina via path",
         tags: ["Content"],
@@ -174,9 +95,9 @@ export const openApiDocument: OpenAPIV3.Document = {
             in: "path",
             required: true,
             schema: {
-              $ref: "#/components/schemas/ContentCategory"
+              $ref: "#/components/schemas/ContentCategory",
             },
-            example: "animes"
+            example: "animes",
           },
           {
             name: "page",
@@ -184,10 +105,10 @@ export const openApiDocument: OpenAPIV3.Document = {
             required: true,
             schema: {
               type: "integer",
-              minimum: 1
+              minimum: 1,
             },
-            example: 2
-          }
+            example: 1,
+          },
         ],
         responses: {
           "200": {
@@ -195,29 +116,37 @@ export const openApiDocument: OpenAPIV3.Document = {
             content: {
               "application/json": {
                 schema: {
-                  $ref: "#/components/schemas/LoadResult"
-                }
-              }
-            }
+                  $ref: "#/components/schemas/LoadResult",
+                },
+              },
+            },
           },
           "400": {
-            $ref: "#/components/responses/BadRequest"
+            $ref: "#/components/responses/BadRequest",
           },
           "404": {
-            $ref: "#/components/responses/NotFound"
+            $ref: "#/components/responses/NotFound",
           },
           "500": {
-            $ref: "#/components/responses/InternalServerError"
-          }
-        }
-      }
-    }
+            $ref: "#/components/responses/InternalServerError",
+          },
+        },
+      },
+    },
   },
   components: {
     schemas: {
       ContentCategory: {
         type: "string",
-        enum: ["todos", "animes", "mangas", "filmes", "series", "livros", "jogos"]
+        enum: [
+          "todos",
+          "animes",
+          "mangas",
+          "filmes",
+          "series",
+          "livros",
+          "jogos",
+        ],
       },
       ContentItem: {
         type: "object",
@@ -225,25 +154,25 @@ export const openApiDocument: OpenAPIV3.Document = {
         properties: {
           id: {
             type: "string",
-            example: "Animes-1"
+            example: "Animes-1",
           },
           title: {
             type: "string",
-            example: "Cowboy Bebop"
+            example: "Cowboy Bebop",
           },
           image: {
             type: "string",
             nullable: true,
-            example: "https://cdn.myanimelist.net/images/anime/4/19644l.jpg"
+            example: "https://cdn.myanimelist.net/images/anime/4/19644l.jpg",
           },
           description: {
             type: "string",
-            nullable: true
+            nullable: true,
           },
           meta: {
-            $ref: "#/components/schemas/ContentMeta"
-          }
-        }
+            $ref: "#/components/schemas/ContentMeta",
+          },
+        },
       },
       ContentMeta: {
         type: "object",
@@ -251,17 +180,17 @@ export const openApiDocument: OpenAPIV3.Document = {
         properties: {
           first: {
             type: "string",
-            description: "Tipo, autor ou genero principal"
+            description: "Tipo, autor ou genero principal",
           },
           second: {
             type: "string",
-            description: "Nota, paginas ou outro dado secundario"
+            description: "Nota, paginas ou outro dado secundario",
           },
           third: {
             type: "string",
-            description: "Ano, episodios, capitulos ou outro dado complementar"
-          }
-        }
+            description: "Ano, episodios, capitulos ou outro dado complementar",
+          },
+        },
       },
       LoadResult: {
         type: "object",
@@ -270,46 +199,28 @@ export const openApiDocument: OpenAPIV3.Document = {
           items: {
             type: "array",
             items: {
-              $ref: "#/components/schemas/ContentItem"
-            }
+              $ref: "#/components/schemas/ContentItem",
+            },
           },
           lastPage: {
             type: "integer",
-            example: 1109
+            example: 1109,
           },
           hasNextPage: {
             type: "boolean",
-            example: true
-          }
-        }
-      },
-      HealthResponse: {
-        type: "object",
-        required: ["status", "redis", "mongo"],
-        properties: {
-          status: {
-            type: "string",
-            example: "ok"
+            example: true,
           },
-          redis: {
-            type: "string",
-            enum: ["connected", "disabled_or_unavailable"]
-          },
-          mongo: {
-            type: "string",
-            enum: ["connected", "unavailable", "not_configured"]
-          }
-        }
+        },
       },
       ErrorResponse: {
         type: "object",
         required: ["message"],
         properties: {
           message: {
-            type: "string"
-          }
-        }
-      }
+            type: "string",
+          },
+        },
+      },
     },
     responses: {
       BadRequest: {
@@ -317,31 +228,41 @@ export const openApiDocument: OpenAPIV3.Document = {
         content: {
           "application/json": {
             schema: {
-              $ref: "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
+              $ref: "#/components/schemas/ErrorResponse",
+            },
+          },
+        },
       },
       NotFound: {
         description: "Recurso nao encontrado",
         content: {
           "application/json": {
             schema: {
-              $ref: "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
+              $ref: "#/components/schemas/ErrorResponse",
+            },
+          },
+        },
+      },
+      ServiceUnavailable: {
+        description: "Credenciais externas nao configuradas",
+        content: {
+          "application/json": {
+            schema: {
+              $ref: "#/components/schemas/ErrorResponse",
+            },
+          },
+        },
       },
       InternalServerError: {
         description: "Erro interno",
         content: {
           "application/json": {
             schema: {
-              $ref: "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      }
-    }
-  }
+              $ref: "#/components/schemas/ErrorResponse",
+            },
+          },
+        },
+      },
+    },
+  },
 };

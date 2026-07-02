@@ -4,8 +4,10 @@ import { contentController } from "./content.controller";
 
 const contentRoutes = Router();
 
-contentRoutes.get("/", contentController.index);
-contentRoutes.get("/:category", contentController.showByCategory);
+contentRoutes.get(
+  "/:category/search/:page",
+  contentController.searchByCategory,
+);
 contentRoutes.get("/:category/:page", contentController.showByCategory);
 
 export { contentRoutes };
