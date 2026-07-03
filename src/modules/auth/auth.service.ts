@@ -17,7 +17,7 @@ import { LoginInput, RegisterInput, VerifyEmailInput } from "./auth.types";
 
 const saltRounds = 10;
 const verificationCodeTtlMs = 15 * 60 * 1000;
-const userNamePattern = /^[a-z0-9._]+$/;
+const userNamePattern = /^[a-z0-9._]+$/i;
 
 function normalizeString(value: unknown) {
   return String(value ?? "").trim();
