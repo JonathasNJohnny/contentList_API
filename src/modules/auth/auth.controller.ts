@@ -43,4 +43,18 @@ export const authController = {
 
     response.json({ user: updatedUser });
   },
+
+  async getAllUsers(request: Request, response: Response) {
+    const user = await authService.getAllUsers();
+
+    response.json({ user });
+  },
+
+  async getUserByName(request: Request, response: Response) {
+    const { name } = request.params;
+
+    const user = await authService.getUserByName(String(name));
+
+    response.json({ user });
+  },
 };

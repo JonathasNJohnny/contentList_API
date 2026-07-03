@@ -25,6 +25,44 @@ const migrations: Migration[] = [
       );
     },
   },
+  {
+    name: "002_create_unique_user_normalized_name_index",
+    async up() {
+      const db = await getMongoDb();
+
+      if (!db) {
+        console.warn("MongoDB not configured. Skipping migrations.");
+        return;
+      }
+
+      const users = db.collection("users");
+
+      await users.updateMany(
+        { normalizedName: { $exists: false } },
+        [
+          {
+            $set: {
+              normalizedName: {
+                $toLower: {
+                  $trim: {
+                    input: "$name",
+                  },
+                },
+              },
+            },
+          },
+        ],
+      );
+
+      await users.createIndex(
+        { normalizedName: 1 },
+        {
+          unique: true,
+          name: "unique_user_normalized_name",
+        },
+      );
+    },
+  },
 ];
 
 export async function runMigrations() {

@@ -23,6 +23,18 @@ export const authRepository = {
     return users.findOne({ email });
   },
 
+  async findByNormalizedName(normalizedName: string) {
+    const users = await getUsersCollection();
+
+    return users.findOne({ normalizedName });
+  },
+
+  async findAll() {
+    const users = await getUsersCollection();
+
+    return users.find().toArray();
+  },
+
   async findById(id: string) {
     const users = await getUsersCollection();
 
@@ -33,14 +45,29 @@ export const authRepository = {
     return users.findOne({ _id: new ObjectId(id) });
   },
 
-  async updateNameById(id: string, name: string) {
+  async findByName(name: string) {
+    const users = await getUsersCollection();
+
+    return users.findOne({ normalizedName: name });
+  },
+
+  async updateNameById(id: string, name: string, normalizedName: string) {
     const users = await getUsersCollection();
 
     if (!ObjectId.isValid(id)) {
       return null;
     }
 
-    await users.updateOne({ _id: new ObjectId(id) }, { $set: { name } });
+    await users.updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          name,
+          normalizedName,
+          updatedAt: new Date(),
+        },
+      },
+    );
 
     return users.findOne({
       _id: new ObjectId(id),

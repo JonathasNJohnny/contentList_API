@@ -18,6 +18,7 @@ export type FavoriteStatus = "watching" | "watch" | "watched";
 export type User = {
   _id?: ObjectId;
   name: string;
+  normalizedName: string;
   email: string;
   password: string;
   emailVerified: boolean;
@@ -36,6 +37,15 @@ export type PublicUser = {
   favorites: Favorite[];
 };
 
+export type generalUser = {
+  name: string;
+  favorites: Favorite[];
+};
+
+export type searchUser = {
+  name: string;
+};
+
 export function toPublicUser(user: User): PublicUser {
   return {
     id: String(user._id),
@@ -43,5 +53,18 @@ export function toPublicUser(user: User): PublicUser {
     email: user.email,
     emailVerified: user.emailVerified,
     favorites: user.favorites ?? [],
+  };
+}
+
+export function toGeneralUser(user: User): generalUser {
+  return {
+    name: user.name,
+    favorites: user.favorites ?? [],
+  };
+}
+
+export function toSearchUser(user: User): searchUser {
+  return {
+    name: user.name,
   };
 }
