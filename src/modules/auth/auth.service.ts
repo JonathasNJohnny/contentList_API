@@ -166,8 +166,6 @@ export const authService = {
 
     const user = await authRepository.updateNameById(userId, name.trim());
 
-    console.log("Updated user:", user); // Log the updated user for debugging
-
     if (!user) {
       throw new AppError("User not found", 404);
     }

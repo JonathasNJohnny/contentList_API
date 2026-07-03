@@ -4,11 +4,16 @@ export type Favorite = {
   contentId: string;
   name: string;
   contentType: string;
+  photoUrl?: string;
+  status: FavoriteStatus;
   userRating?: number;
-  startDate?: string;
-  endDate?: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  moment?: number;
   comment?: string;
 };
+
+export type FavoriteStatus = "watching" | "watch" | "watched";
 
 export type User = {
   _id?: ObjectId;
@@ -37,6 +42,6 @@ export function toPublicUser(user: User): PublicUser {
     name: user.name,
     email: user.email,
     emailVerified: user.emailVerified,
-    favorites: user.favorites,
+    favorites: user.favorites ?? [],
   };
 }
