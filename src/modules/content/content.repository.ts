@@ -65,6 +65,10 @@ type IgdbGameItem = {
   first_release_date?: number;
 };
 
+type BrasilApiIsbnResponse = {
+  title?: string;
+};
+
 type OpenLibraryBookItem = {
   key: string;
   title?: string;
@@ -78,6 +82,27 @@ type OpenLibraryBookItem = {
 type OpenLibraryResponse = {
   numFound: number;
   docs: OpenLibraryBookItem[];
+};
+
+type GoogleBooksVolumeItem = {
+  id: string;
+  volumeInfo?: {
+    title?: string;
+    authors?: string[];
+    description?: string;
+    publishedDate?: string;
+    pageCount?: number;
+    imageLinks?: {
+      thumbnail?: string;
+      smallThumbnail?: string;
+    };
+    categories?: string[];
+  };
+};
+
+type GoogleBooksResponse = {
+  totalItems: number;
+  items?: GoogleBooksVolumeItem[];
 };
 
 type FetchJsonResult<T> = {
@@ -107,7 +132,11 @@ function escapeIgdbSearchQuery(query: string) {
   return query.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
-function mapJikanResult(category: "Animes" | "Mangas", result: JikanResponse, page: number): LoadResult {
+function mapJikanResult(
+  category: "Animes" | "Mangas",
+  result: JikanResponse,
+  page: number,
+): LoadResult {
   return {
     items: result.data.map((item) => ({
       id: `${category}-${item.mal_id}`,
@@ -135,7 +164,11 @@ function mapJikanResult(category: "Animes" | "Mangas", result: JikanResponse, pa
   };
 }
 
-function mapTmdbResult(category: "Filmes" | "Series", result: TmdbResponse, page: number): LoadResult {
+function mapTmdbResult(
+  category: "Filmes" | "Series",
+  result: TmdbResponse,
+  page: number,
+): LoadResult {
   return {
     items: result.results.map((item) => ({
       id: `${category}-${item.id}`,
@@ -155,7 +188,12 @@ function mapTmdbResult(category: "Filmes" | "Series", result: TmdbResponse, page
   };
 }
 
-function mapGamesResult(data: IgdbGameItem[], page: number, limit: number, totalCount: number): LoadResult {
+function mapGamesResult(
+  data: IgdbGameItem[],
+  page: number,
+  limit: number,
+  totalCount: number,
+): LoadResult {
   const offset = (page - 1) * limit;
 
   return {
@@ -189,7 +227,11 @@ function mapGamesResult(data: IgdbGameItem[], page: number, limit: number, total
   };
 }
 
-function mapBooksResult(result: OpenLibraryResponse, page: number, maxResults: number): LoadResult {
+function mapBooksResult(
+  result: OpenLibraryResponse,
+  page: number,
+  maxResults: number,
+): LoadResult {
   return {
     items: result.docs.map((item) => ({
       id: `Livros-${item.key}`,
@@ -211,6 +253,44 @@ function mapBooksResult(result: OpenLibraryResponse, page: number, maxResults: n
   };
 }
 
+function mapGoogleBooksResult(
+  result: GoogleBooksResponse,
+  page: number,
+  maxResults: number,
+): LoadResult {
+  const totalItems = result.totalItems || 0;
+
+  return {
+    items: (result.items ?? []).map((item) => {
+      const volumeInfo = item.volumeInfo;
+
+      return {
+        id: `Livros-${item.id}`,
+        title: volumeInfo?.title ?? "Sem titulo",
+        image:
+          volumeInfo?.imageLinks?.thumbnail ??
+          volumeInfo?.imageLinks?.smallThumbnail,
+        description:
+          volumeInfo?.description ??
+          volumeInfo?.categories?.slice(0, 6).join(", "),
+        meta: {
+          first: volumeInfo?.authors?.[0] ?? "Livro",
+          second: volumeInfo?.pageCount ? `${volumeInfo.pageCount} p.` : "-",
+          third: volumeInfo?.publishedDate?.slice(0, 4) ?? "-",
+        },
+      };
+    }),
+    lastPage: Math.max(1, Math.ceil(totalItems / maxResults)),
+    hasNextPage: page * maxResults < totalItems,
+  };
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 async function fetchJson<T>(
   url: URL,
   init?: RequestInit,
@@ -229,6 +309,31 @@ async function fetchJson<T>(
 
 async function getJson<T>(url: URL, init?: RequestInit): Promise<T> {
   return (await fetchJson<T>(url, init)).data;
+}
+
+async function getJsonWithRetry<T>(
+  url: URL,
+  init?: RequestInit,
+  maxAttempts = 5,
+  retryDelayMs = 500,
+): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await getJson<T>(url, init);
+    } catch (error) {
+      lastError = error;
+
+      if (attempt < maxAttempts) {
+        await delay(retryDelayMs);
+      }
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("External request failed.");
 }
 
 async function getTwitchAccessToken() {
@@ -261,6 +366,39 @@ async function getTwitchAccessToken() {
   };
 
   return data.access_token;
+}
+
+async function getBookTitleByIsbn(isbn: string): Promise<string> {
+  const url = buildApiUrl("https://brasilapi.com.br/api/isbn/v1", `/${isbn}`);
+
+  const result = await getJson<BrasilApiIsbnResponse>(url);
+  const title = result.title?.trim();
+
+  if (!title) {
+    throw new Error("BrasilAPI did not return a book title.");
+  }
+
+  return title;
+}
+
+async function searchGoogleBooks(
+  query: string,
+  page: number,
+): Promise<LoadResult> {
+  const maxResults = 40;
+  const startIndex = (page - 1) * maxResults;
+  const url = new URL(env.googleBooksSearchUrl);
+  url.searchParams.set("q", query);
+  url.searchParams.set("maxResults", String(maxResults));
+  url.searchParams.set("startIndex", String(startIndex));
+
+  if (env.googleBooksApiKey) {
+    url.searchParams.set("key", env.googleBooksApiKey);
+  }
+
+  const result = await getJsonWithRetry<GoogleBooksResponse>(url);
+
+  return mapGoogleBooksResult(result, page, maxResults);
 }
 
 export const contentRepository = {
@@ -420,14 +558,12 @@ export const contentRepository = {
   },
 
   async searchBooks(query: string, page: number): Promise<LoadResult> {
-    const maxResults = 50;
-    const url = new URL(env.openLibrarySearchUrl);
-    url.searchParams.set("q", query);
-    url.searchParams.set("limit", String(maxResults));
-    url.searchParams.set("page", String(page));
+    return searchGoogleBooks(query, page);
+  },
 
-    const result = await getJson<OpenLibraryResponse>(url);
+  async searchBooksByIsbn(isbn: string, page: number): Promise<LoadResult> {
+    const title = await getBookTitleByIsbn(isbn);
 
-    return mapBooksResult(result, page, maxResults);
+    return searchGoogleBooks(title, page);
   },
 };

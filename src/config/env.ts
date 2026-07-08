@@ -22,6 +22,10 @@ export const env = {
   openLibrarySearchUrl:
     process.env.VITE_OPEN_LIBRARY_SEARCH_URL ??
     "https://openlibrary.org/search.json",
+  googleBooksApiKey: process.env.GOOGLE_BOOKS_API_KEY,
+  googleBooksSearchUrl:
+    process.env.GOOGLE_BOOKS_SEARCH_URL ??
+    "https://www.googleapis.com/books/v1/volumes",
   smtpHost: process.env.SMTP_HOST,
   smtpPort: Number(process.env.SMTP_PORT) || 587,
   smtpUser: process.env.SMTP_USER,

@@ -23,6 +23,32 @@ function buildCacheKey(query: ContentQuery) {
   return `content:${query.category.toLowerCase()}:page:${query.page}`;
 }
 
+function extractBookIsbn(query: string): string | null {
+  const trimmedQuery = query.trim();
+  const numericQuery = trimmedQuery.replace(/[\s-]/g, "");
+
+  if (/^\d{10}(\d{3})?$/.test(numericQuery)) {
+    return numericQuery;
+  }
+
+  if (!/amazon\./i.test(trimmedQuery)) {
+    return null;
+  }
+
+  const amazonProductMatch = trimmedQuery.match(
+    /\/(?:dp|gp\/product)\/([0-9-]{10,17})(?:[/?#]|$)/i,
+  );
+  const amazonProductDigits = amazonProductMatch?.[1]?.replace(/\D/g, "");
+
+  if (amazonProductDigits && /^\d{10}(\d{3})?$/.test(amazonProductDigits)) {
+    return amazonProductDigits;
+  }
+
+  const isbnLikeMatch = trimmedQuery.match(/(?:^|\D)(\d{13}|\d{10})(?:\D|$)/);
+
+  return isbnLikeMatch?.[1] ?? null;
+}
+
 async function loadCategory(
   category: ContentCategory,
   page: number,
@@ -80,7 +106,11 @@ async function searchCategory(
   }
 
   if (category === "Livros") {
-    return contentRepository.searchBooks(query, page);
+    const isbn = extractBookIsbn(query);
+
+    return isbn
+      ? contentRepository.searchBooksByIsbn(isbn, page)
+      : contentRepository.searchBooks(query, page);
   }
 
   throw new AppError("Categoria ainda nao implementada.", 404);
