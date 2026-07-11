@@ -74,6 +74,28 @@ export const authRepository = {
     });
   },
 
+  async updatePicById(id: string, pic: string) {
+    const users = await getUsersCollection();
+
+    if (!ObjectId.isValid(id)) {
+      return null;
+    }
+
+    await users.updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          pfp: pic,
+          updatedAt: new Date(),
+        },
+      },
+    );
+
+    return users.findOne({
+      _id: new ObjectId(id),
+    });
+  },
+
   // async updateEmailVerificationCodeById(
   //   id: ObjectId,
   //   code: string,

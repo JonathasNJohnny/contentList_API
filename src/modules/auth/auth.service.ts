@@ -134,6 +134,7 @@ export const authService = {
         normalizedName,
         email,
         password: await bcrypt.hash(password, saltRounds),
+        pfp: "4",
         emailVerified: false,
         verificationCode,
         verificationCodeExpiresAt: new Date(
@@ -216,6 +217,7 @@ export const authService = {
         id: String(user._id),
         name: user.name,
         email: user.email,
+        pfp: user.pfp,
       },
     };
   },
@@ -250,6 +252,22 @@ export const authService = {
         throw new AppError("Name already in use.", 409);
       }
 
+      throw error;
+    }
+
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+
+    return toPublicUser(user);
+  },
+
+  async updatePic(userId: string, inputPic: string) {
+    let user: User | null;
+
+    try {
+      user = await authRepository.updatePicById(userId, inputPic);
+    } catch (error) {
       throw error;
     }
 

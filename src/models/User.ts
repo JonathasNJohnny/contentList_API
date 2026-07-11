@@ -21,6 +21,7 @@ export type User = {
   normalizedName: string;
   email: string;
   password: string;
+  pfp: string;
   emailVerified: boolean;
   verificationCode?: string;
   verificationCodeExpiresAt?: Date;
@@ -33,17 +34,20 @@ export type PublicUser = {
   id: string;
   name: string;
   email: string;
+  pfp: string;
   emailVerified: boolean;
   favorites: Favorite[];
 };
 
 export type generalUser = {
   name: string;
+  pfp: string;
   favorites: Favorite[];
 };
 
 export type searchUser = {
   name: string;
+  pfp: string;
 };
 
 export function toPublicUser(user: User): PublicUser {
@@ -51,6 +55,7 @@ export function toPublicUser(user: User): PublicUser {
     id: String(user._id),
     name: user.name,
     email: user.email,
+    pfp: user.pfp,
     emailVerified: user.emailVerified,
     favorites: user.favorites ?? [],
   };
@@ -59,6 +64,7 @@ export function toPublicUser(user: User): PublicUser {
 export function toGeneralUser(user: User): generalUser {
   return {
     name: user.name,
+    pfp: user.pfp,
     favorites: user.favorites ?? [],
   };
 }
@@ -66,5 +72,6 @@ export function toGeneralUser(user: User): generalUser {
 export function toSearchUser(user: User): searchUser {
   return {
     name: user.name,
+    pfp: user.pfp,
   };
 }

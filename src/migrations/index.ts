@@ -37,28 +37,45 @@ const migrations: Migration[] = [
 
       const users = db.collection("users");
 
-      await users.updateMany(
-        { normalizedName: { $exists: false } },
-        [
-          {
-            $set: {
-              normalizedName: {
-                $toLower: {
-                  $trim: {
-                    input: "$name",
-                  },
+      await users.updateMany({ normalizedName: { $exists: false } }, [
+        {
+          $set: {
+            normalizedName: {
+              $toLower: {
+                $trim: {
+                  input: "$name",
                 },
               },
             },
           },
-        ],
-      );
+        },
+      ]);
 
       await users.createIndex(
         { normalizedName: 1 },
         {
           unique: true,
           name: "unique_user_normalized_name",
+        },
+      );
+    },
+  },
+  {
+    name: "003_backfill_user_pfp",
+    async up() {
+      const db = await getMongoDb();
+
+      if (!db) {
+        console.warn("MongoDB not configured. Skipping migrations.");
+        return;
+      }
+
+      await db.collection("users").updateMany(
+        { pfp: { $ne: "4" } },
+        {
+          $set: {
+            pfp: "4",
+          },
         },
       );
     },

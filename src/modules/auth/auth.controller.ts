@@ -44,6 +44,18 @@ export const authController = {
     response.json({ user: updatedUser });
   },
 
+  async updatePic(request: Request, response: Response) {
+    if (!request.user) {
+      throw new AppError("Usuario nao autenticado.", 401);
+    }
+
+    const { pfp } = request.body;
+
+    const updatedUser = await authService.updatePic(request.user.id, pfp);
+
+    response.json({ user: updatedUser });
+  },
+
   async getAllUsers(request: Request, response: Response) {
     const user = await authService.getAllUsers();
 
