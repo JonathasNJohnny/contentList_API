@@ -71,7 +71,9 @@ const migrations: Migration[] = [
       }
 
       await db.collection("users").updateMany(
-        { pfp: { $ne: "4" } },
+        {
+          $or: [{ pfp: null }, { pfp: { $exists: false } }],
+        },
         {
           $set: {
             pfp: "4",

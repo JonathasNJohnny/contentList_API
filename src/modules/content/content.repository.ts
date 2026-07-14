@@ -2,32 +2,33 @@ import { env } from "../../config/env";
 import { buildApiUrl } from "../../shared/http/buildApiUrl";
 import { LoadResult } from "./content.types";
 
-type AnimeImage = {
-  image_url?: string;
-  large_image_url?: string;
+type MyAnimeListPicture = {
+  medium?: string;
+  large?: string;
 };
 
-type JikanItem = {
-  mal_id: number;
+type MyAnimeListNode = {
+  id: number;
   title: string;
-  title_english?: string;
-  images?: {
-    jpg?: AnimeImage;
-    webp?: AnimeImage;
+  alternative_titles?: {
+    en?: string;
   };
-  episodes?: number;
-  chapters?: number;
-  volumes?: number;
-  score?: number;
-  type?: string;
+  main_picture?: MyAnimeListPicture;
+  mean?: number;
+  media_type?: string;
   synopsis?: string;
+  num_episodes?: number;
+  num_chapters?: number;
+  num_volumes?: number;
 };
 
-type JikanResponse = {
-  data: JikanItem[];
-  pagination?: {
-    last_visible_page: number;
-    has_next_page: boolean;
+type MyAnimeListResponse = {
+  data: Array<{
+    node: MyAnimeListNode;
+  }>;
+  paging?: {
+    next?: string;
+    previous?: string;
   };
 };
 
@@ -112,12 +113,19 @@ type FetchJsonResult<T> = {
 
 let twitchTokenCache: { token: string; expiresAt: number } | null = null;
 
-function getJikanImage(item: JikanItem) {
-  return (
-    item.images?.webp?.large_image_url ??
-    item.images?.jpg?.large_image_url ??
-    item.images?.jpg?.image_url
-  );
+const myAnimeListFields = [
+  "alternative_titles",
+  "main_picture",
+  "mean",
+  "media_type",
+  "synopsis",
+  "num_episodes",
+  "num_chapters",
+  "num_volumes",
+].join(",");
+
+function getMyAnimeListImage(item: MyAnimeListNode) {
+  return item.main_picture?.large ?? item.main_picture?.medium;
 }
 
 function yearFromDate(date?: string) {
@@ -132,35 +140,34 @@ function escapeIgdbSearchQuery(query: string) {
   return query.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
-function mapJikanResult(
+function mapMyAnimeListResult(
   category: "Animes" | "Mangas",
-  result: JikanResponse,
+  result: MyAnimeListResponse,
   page: number,
 ): LoadResult {
+  const hasNextPage = Boolean(result.paging?.next);
+
   return {
-    items: result.data.map((item) => ({
-      id: `${category}-${item.mal_id}`,
-      title: item.title_english || item.title,
-      image: getJikanImage(item),
-      description: item.synopsis,
-      meta:
-        category === "Animes"
-          ? {
-              first: item.type ?? "-",
-              second: item.score ? String(item.score) : "-",
-              third: item.episodes ? String(item.episodes) : "-",
-            }
-          : {
-              first: item.type ?? "-",
-              second: item.score ? String(item.score) : "-",
-              third:
-                (item.chapters ?? item.volumes)
-                  ? String(item.chapters ?? item.volumes)
-                  : "-",
-            },
+    items: result.data.map(({ node }) => ({
+      id: `${category}-${node.id}`,
+      title: node.alternative_titles?.en || node.title,
+      image: getMyAnimeListImage(node),
+      description: node.synopsis,
+      meta: {
+        first: node.media_type ?? "-",
+        second: node.mean ? String(node.mean) : "-",
+        third:
+          category === "Animes"
+            ? node.num_episodes
+              ? String(node.num_episodes)
+              : "-"
+            : (node.num_chapters ?? node.num_volumes)
+              ? String(node.num_chapters ?? node.num_volumes)
+              : "-",
+      },
     })),
-    lastPage: result.pagination?.last_visible_page ?? page,
-    hasNextPage: Boolean(result.pagination?.has_next_page),
+    lastPage: hasNextPage ? page + 1 : page,
+    hasNextPage,
   };
 }
 
@@ -402,34 +409,61 @@ async function searchGoogleBooks(
 }
 
 export const contentRepository = {
-  async loadJikanContent(
+  async loadMyAnimeListContent(
     category: "Animes" | "Mangas",
     page: number,
   ): Promise<LoadResult> {
-    const endpoint =
-      category === "Animes" ? env.jikanAnimeEndpoint : env.jikanMangaEndpoint;
-    const url = buildApiUrl(env.jikanBaseUrl, endpoint);
-    url.searchParams.set("page", String(page));
+    if (!env.myAnimeListClientId) {
+      throw new Error("MyAnimeList client id is missing.");
+    }
 
-    const result = await getJson<JikanResponse>(url);
+    const limit = 50;
+    const offset = (page - 1) * limit;
+    const url = buildApiUrl(
+      env.myAnimeListBaseUrl,
+      category === "Animes" ? "/anime/ranking" : "/manga/ranking",
+    );
+    url.searchParams.set("ranking_type", "all");
+    url.searchParams.set("limit", String(limit));
+    url.searchParams.set("offset", String(offset));
+    url.searchParams.set("fields", myAnimeListFields);
 
-    return mapJikanResult(category, result, page);
+    const result = await getJson<MyAnimeListResponse>(url, {
+      headers: {
+        "X-MAL-CLIENT-ID": env.myAnimeListClientId,
+      },
+    });
+
+    return mapMyAnimeListResult(category, result, page);
   },
 
-  async searchJikanContent(
+  async searchMyAnimeListContent(
     category: "Animes" | "Mangas",
     query: string,
     page: number,
   ): Promise<LoadResult> {
-    const endpoint =
-      category === "Animes" ? env.jikanAnimeEndpoint : env.jikanMangaEndpoint;
-    const url = buildApiUrl(env.jikanBaseUrl, endpoint);
+    if (!env.myAnimeListClientId) {
+      throw new Error("MyAnimeList client id is missing.");
+    }
+
+    const limit = 50;
+    const offset = (page - 1) * limit;
+    const url = buildApiUrl(
+      env.myAnimeListBaseUrl,
+      category === "Animes" ? "/anime" : "/manga",
+    );
     url.searchParams.set("q", query);
-    url.searchParams.set("page", String(page));
+    url.searchParams.set("limit", String(limit));
+    url.searchParams.set("offset", String(offset));
+    url.searchParams.set("fields", myAnimeListFields);
 
-    const result = await getJson<JikanResponse>(url);
+    const result = await getJson<MyAnimeListResponse>(url, {
+      headers: {
+        "X-MAL-CLIENT-ID": env.myAnimeListClientId,
+      },
+    });
 
-    return mapJikanResult(category, result, page);
+    return mapMyAnimeListResult(category, result, page);
   },
 
   async loadTmdbContent(

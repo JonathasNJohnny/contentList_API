@@ -54,7 +54,11 @@ async function loadCategory(
   page: number,
 ): Promise<LoadResult> {
   if (category === "Animes" || category === "Mangas") {
-    return contentRepository.loadJikanContent(category, page);
+    if (!env.myAnimeListClientId) {
+      throw new AppError("Configure MyAnimeList client id.", 503);
+    }
+
+    return contentRepository.loadMyAnimeListContent(category, page);
   }
 
   if (category === "Filmes" || category === "Series") {
@@ -86,7 +90,11 @@ async function searchCategory(
   page: number,
 ): Promise<LoadResult> {
   if (category === "Animes" || category === "Mangas") {
-    return contentRepository.searchJikanContent(category, query, page);
+    if (!env.myAnimeListClientId) {
+      throw new AppError("Configure MyAnimeList client id.", 503);
+    }
+
+    return contentRepository.searchMyAnimeListContent(category, query, page);
   }
 
   if (category === "Filmes" || category === "Series") {
@@ -118,10 +126,13 @@ async function searchCategory(
 
 async function loadAll(): Promise<LoadResult> {
   const loaders: Array<Promise<LoadResult>> = [
-    contentRepository.loadJikanContent("Animes", 1),
-    contentRepository.loadJikanContent("Mangas", 1),
     contentRepository.loadBooks(1),
   ];
+
+  if (env.myAnimeListClientId) {
+    loaders.push(contentRepository.loadMyAnimeListContent("Animes", 1));
+    loaders.push(contentRepository.loadMyAnimeListContent("Mangas", 1));
+  }
 
   if (env.tmdbBearerToken || env.tmdbApiKey) {
     loaders.push(contentRepository.loadTmdbContent("Filmes", 1));
@@ -150,10 +161,13 @@ async function loadAll(): Promise<LoadResult> {
 
 async function searchAll(query: string): Promise<LoadResult> {
   const loaders: Array<Promise<LoadResult>> = [
-    contentRepository.searchJikanContent("Animes", query, 1),
-    contentRepository.searchJikanContent("Mangas", query, 1),
     contentRepository.searchBooks(query, 1),
   ];
+
+  if (env.myAnimeListClientId) {
+    loaders.push(contentRepository.searchMyAnimeListContent("Animes", query, 1));
+    loaders.push(contentRepository.searchMyAnimeListContent("Mangas", query, 1));
+  }
 
   if (env.tmdbBearerToken || env.tmdbApiKey) {
     loaders.push(contentRepository.searchTmdbContent("Filmes", query, 1));

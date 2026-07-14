@@ -5,9 +5,11 @@ export const env = {
   contentCacheTtlSeconds: Number(process.env.CONTENT_CACHE_TTL_SECONDS) || 900,
   mongoDbDirect: process.env.MONGO_DB_DIRECT,
   mongoDbName: process.env.MONGO_DB_NAME ?? "contentListData",
-  jikanBaseUrl: process.env.VITE_JIKAN_BASE_URL ?? "https://api.jikan.moe/v4",
-  jikanAnimeEndpoint: process.env.VITE_JIKAN_ANIME_ENDPOINT ?? "/anime",
-  jikanMangaEndpoint: process.env.VITE_JIKAN_MANGA_ENDPOINT ?? "/manga",
+  myAnimeListBaseUrl:
+    process.env.VITE_MY_ANIME_LIST_BASE_URL ??
+    "https://api.myanimelist.net/v2",
+  myAnimeListClientId: process.env.VITE_MY_ANIME_LIST_CLIENT_ID,
+  myAnimeListSecret: process.env.VITE_MY_ANIME_LIST_SECRET,
   tmdbBearerToken: process.env.VITE_TMDB_ACCESS_TOKEN,
   tmdbApiKey: process.env.VITE_TMDB_API_KEY,
   tmdbBaseUrl: process.env.VITE_TMDB_BASE_URL ?? "https://api.themoviedb.org/3",
