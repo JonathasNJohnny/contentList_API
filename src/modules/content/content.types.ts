@@ -7,6 +7,8 @@ export type ContentCategory =
   | "Livros"
   | "Jogos";
 
+export type ContentLanguage = "pt-BR" | "en-US";
+
 export type ContentItem = {
   id: string;
   title: string;
@@ -28,6 +30,7 @@ export type LoadResult = {
 export type ContentQuery = {
   category: ContentCategory;
   page: number;
+  language?: ContentLanguage;
 };
 
 export type ContentSearchQuery = ContentQuery & {

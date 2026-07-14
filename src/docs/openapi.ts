@@ -57,6 +57,18 @@ export const openApiDocument: OpenAPIV3.Document = {
             description: "Texto usado na busca do provedor externo.",
             example: "matrix",
           },
+          {
+            name: "language",
+            in: "query",
+            required: false,
+            schema: {
+              type: "string",
+              enum: ["portuguese", "english"],
+            },
+            description:
+              "Idioma opcional usado nos provedores que aceitam filtro de idioma. Se nao informar, o padrao e english.",
+            example: "portuguese",
+          },
         ],
         responses: {
           "200": {
@@ -108,6 +120,18 @@ export const openApiDocument: OpenAPIV3.Document = {
               minimum: 1,
             },
             example: 1,
+          },
+          {
+            name: "language",
+            in: "query",
+            required: false,
+            schema: {
+              type: "string",
+              enum: ["portuguese", "english"],
+            },
+            description:
+              "Idioma opcional usado nos provedores que aceitam filtro de idioma. Se nao informar, o padrao e english.",
+            example: "english",
           },
         ],
         responses: {

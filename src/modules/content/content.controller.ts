@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 
 import { AppError } from "../../shared/errors/AppError";
 import { contentService } from "./content.service";
-import { ContentCategory } from "./content.types";
+import { ContentCategory, ContentLanguage } from "./content.types";
 
 const categoryMap: Record<string, ContentCategory> = {
   todos: "Todos",
@@ -10,13 +10,25 @@ const categoryMap: Record<string, ContentCategory> = {
   mangas: "Mangas",
   filmes: "Filmes",
   series: "Series",
-  "séries": "Series",
+  séries: "Series",
   livros: "Livros",
-  jogos: "Jogos"
+  jogos: "Jogos",
+};
+
+const languageMap: Record<string, ContentLanguage> = {
+  english: "en-US",
+  en: "en-US",
+  "en-us": "en-US",
+  portuguese: "pt-BR",
+  portugues: "pt-BR",
+  pt: "pt-BR",
+  "pt-br": "pt-BR",
 };
 
 function normalizeCategory(value: unknown): ContentCategory {
-  const rawCategory = String(value ?? "todos").trim().toLowerCase();
+  const rawCategory = String(value ?? "todos")
+    .trim()
+    .toLowerCase();
   const category = categoryMap[rawCategory];
 
   if (!category) {
@@ -46,11 +58,34 @@ function normalizeSearchQuery(value: unknown) {
   return query;
 }
 
+function normalizeLanguage(value: unknown): ContentLanguage | undefined {
+  const rawLanguage = String(value ?? "")
+    .trim()
+    .toLowerCase();
+
+  if (!rawLanguage) {
+    return "en-US";
+  }
+
+  const normalizedLanguage = rawLanguage
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  const language = languageMap[normalizedLanguage];
+
+  if (!language) {
+    throw new AppError("Idioma invalido.", 400);
+  }
+
+  return language;
+}
+
 export const contentController = {
   async index(request: Request, response: Response) {
     const result = await contentService.list({
       category: normalizeCategory(request.query.category),
-      page: normalizePage(request.query.page)
+      page: normalizePage(request.query.page),
+      language: normalizeLanguage(request.query.language),
     });
 
     response.json(result);
@@ -60,7 +95,8 @@ export const contentController = {
     const result = await contentService.search({
       category: normalizeCategory(request.query.category),
       query: normalizeSearchQuery(request.query.query),
-      page: normalizePage(request.query.page)
+      page: normalizePage(request.query.page),
+      language: normalizeLanguage(request.query.language),
     });
 
     response.json(result);
@@ -69,7 +105,8 @@ export const contentController = {
   async showByCategory(request: Request, response: Response) {
     const result = await contentService.list({
       category: normalizeCategory(request.params.category),
-      page: normalizePage(request.params.page ?? request.query.page)
+      page: normalizePage(request.params.page ?? request.query.page),
+      language: normalizeLanguage(request.query.language),
     });
 
     response.json(result);
@@ -79,9 +116,10 @@ export const contentController = {
     const result = await contentService.search({
       category: normalizeCategory(request.params.category),
       query: normalizeSearchQuery(request.query.query),
-      page: normalizePage(request.params.page ?? request.query.page)
+      page: normalizePage(request.params.page ?? request.query.page),
+      language: normalizeLanguage(request.query.language),
     });
 
     response.json(result);
-  }
+  },
 };

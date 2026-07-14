@@ -1,6 +1,6 @@
 import { env } from "../../config/env";
 import { buildApiUrl } from "../../shared/http/buildApiUrl";
-import { LoadResult } from "./content.types";
+import { ContentLanguage, LoadResult } from "./content.types";
 
 type MyAnimeListPicture = {
   medium?: string;
@@ -391,6 +391,7 @@ async function getBookTitleByIsbn(isbn: string): Promise<string> {
 async function searchGoogleBooks(
   query: string,
   page: number,
+  language?: ContentLanguage,
 ): Promise<LoadResult> {
   const maxResults = 40;
   const startIndex = (page - 1) * maxResults;
@@ -398,6 +399,10 @@ async function searchGoogleBooks(
   url.searchParams.set("q", query);
   url.searchParams.set("maxResults", String(maxResults));
   url.searchParams.set("startIndex", String(startIndex));
+
+  if (language) {
+    url.searchParams.set("langRestrict", language === "pt-BR" ? "pt" : "en");
+  }
 
   if (env.googleBooksApiKey) {
     url.searchParams.set("key", env.googleBooksApiKey);
@@ -469,12 +474,14 @@ export const contentRepository = {
   async loadTmdbContent(
     category: "Filmes" | "Series",
     page: number,
+    language: ContentLanguage = "en-US",
   ): Promise<LoadResult> {
     const url = buildApiUrl(
       env.tmdbBaseUrl,
       category === "Filmes" ? env.tmdbMovieEndpoint : env.tmdbTvEndpoint,
     );
     url.searchParams.set("page", String(page));
+    url.searchParams.set("language", language);
 
     if (env.tmdbApiKey && !env.tmdbBearerToken) {
       url.searchParams.set("api_key", env.tmdbApiKey);
@@ -495,6 +502,7 @@ export const contentRepository = {
     category: "Filmes" | "Series",
     query: string,
     page: number,
+    language: ContentLanguage = "en-US",
   ): Promise<LoadResult> {
     const url = buildApiUrl(
       env.tmdbBaseUrl,
@@ -502,7 +510,7 @@ export const contentRepository = {
     );
     url.searchParams.set("query", query);
     url.searchParams.set("page", String(page));
-    url.searchParams.set("language", "pt-BR");
+    url.searchParams.set("language", language);
 
     if (env.tmdbApiKey && !env.tmdbBearerToken) {
       url.searchParams.set("api_key", env.tmdbApiKey);
@@ -579,25 +587,40 @@ export const contentRepository = {
     return mapGamesResult(data, page, limit, normalizedTotalCount);
   },
 
-  async loadBooks(page: number): Promise<LoadResult> {
+  async loadBooks(
+    page: number,
+    language?: ContentLanguage,
+  ): Promise<LoadResult> {
     const maxResults = 50;
     const url = new URL(env.openLibrarySearchUrl);
     url.searchParams.set("q", "subject:fiction");
     url.searchParams.set("limit", String(maxResults));
     url.searchParams.set("page", String(page));
 
+    if (language) {
+      url.searchParams.set("language", language === "pt-BR" ? "por" : "eng");
+    }
+
     const result = await getJson<OpenLibraryResponse>(url);
 
     return mapBooksResult(result, page, maxResults);
   },
 
-  async searchBooks(query: string, page: number): Promise<LoadResult> {
-    return searchGoogleBooks(query, page);
+  async searchBooks(
+    query: string,
+    page: number,
+    language?: ContentLanguage,
+  ): Promise<LoadResult> {
+    return searchGoogleBooks(query, page, language);
   },
 
-  async searchBooksByIsbn(isbn: string, page: number): Promise<LoadResult> {
+  async searchBooksByIsbn(
+    isbn: string,
+    page: number,
+    language?: ContentLanguage,
+  ): Promise<LoadResult> {
     const title = await getBookTitleByIsbn(isbn);
 
-    return searchGoogleBooks(title, page);
+    return searchGoogleBooks(title, page, language);
   },
 };

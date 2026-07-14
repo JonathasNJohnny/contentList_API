@@ -4,6 +4,7 @@ import { AppError } from "../../shared/errors/AppError";
 import { contentRepository } from "./content.repository";
 import {
   ContentCategory,
+  ContentLanguage,
   ContentQuery,
   ContentSearchQuery,
   LoadResult,
@@ -20,7 +21,9 @@ const implementedCategories = new Set<ContentCategory>([
 ]);
 
 function buildCacheKey(query: ContentQuery) {
-  return `content:${query.category.toLowerCase()}:page:${query.page}`;
+  return `content:${query.category.toLowerCase()}:page:${query.page}:language:${
+    query.language ?? "default"
+  }`;
 }
 
 function extractBookIsbn(query: string): string | null {
@@ -52,6 +55,7 @@ function extractBookIsbn(query: string): string | null {
 async function loadCategory(
   category: ContentCategory,
   page: number,
+  language?: ContentLanguage,
 ): Promise<LoadResult> {
   if (category === "Animes" || category === "Mangas") {
     if (!env.myAnimeListClientId) {
@@ -66,7 +70,7 @@ async function loadCategory(
       throw new AppError("Configure TMDB access token or API key.", 503);
     }
 
-    return contentRepository.loadTmdbContent(category, page);
+    return contentRepository.loadTmdbContent(category, page, language);
   }
 
   if (category === "Jogos") {
@@ -78,7 +82,7 @@ async function loadCategory(
   }
 
   if (category === "Livros") {
-    return contentRepository.loadBooks(page);
+    return contentRepository.loadBooks(page, language);
   }
 
   throw new AppError("Categoria ainda nao implementada.", 404);
@@ -88,6 +92,7 @@ async function searchCategory(
   category: ContentCategory,
   query: string,
   page: number,
+  language?: ContentLanguage,
 ): Promise<LoadResult> {
   if (category === "Animes" || category === "Mangas") {
     if (!env.myAnimeListClientId) {
@@ -102,7 +107,7 @@ async function searchCategory(
       throw new AppError("Configure TMDB access token or API key.", 503);
     }
 
-    return contentRepository.searchTmdbContent(category, query, page);
+    return contentRepository.searchTmdbContent(category, query, page, language);
   }
 
   if (category === "Jogos") {
@@ -117,16 +122,16 @@ async function searchCategory(
     const isbn = extractBookIsbn(query);
 
     return isbn
-      ? contentRepository.searchBooksByIsbn(isbn, page)
-      : contentRepository.searchBooks(query, page);
+      ? contentRepository.searchBooksByIsbn(isbn, page, language)
+      : contentRepository.searchBooks(query, page, language);
   }
 
   throw new AppError("Categoria ainda nao implementada.", 404);
 }
 
-async function loadAll(): Promise<LoadResult> {
+async function loadAll(language?: ContentLanguage): Promise<LoadResult> {
   const loaders: Array<Promise<LoadResult>> = [
-    contentRepository.loadBooks(1),
+    contentRepository.loadBooks(1, language),
   ];
 
   if (env.myAnimeListClientId) {
@@ -135,8 +140,8 @@ async function loadAll(): Promise<LoadResult> {
   }
 
   if (env.tmdbBearerToken || env.tmdbApiKey) {
-    loaders.push(contentRepository.loadTmdbContent("Filmes", 1));
-    loaders.push(contentRepository.loadTmdbContent("Series", 1));
+    loaders.push(contentRepository.loadTmdbContent("Filmes", 1, language));
+    loaders.push(contentRepository.loadTmdbContent("Series", 1, language));
   }
 
   if (env.twitchClientId && env.twitchClientSecret) {
@@ -159,19 +164,30 @@ async function loadAll(): Promise<LoadResult> {
   };
 }
 
-async function searchAll(query: string): Promise<LoadResult> {
+async function searchAll(
+  query: string,
+  language?: ContentLanguage,
+): Promise<LoadResult> {
   const loaders: Array<Promise<LoadResult>> = [
-    contentRepository.searchBooks(query, 1),
+    contentRepository.searchBooks(query, 1, language),
   ];
 
   if (env.myAnimeListClientId) {
-    loaders.push(contentRepository.searchMyAnimeListContent("Animes", query, 1));
-    loaders.push(contentRepository.searchMyAnimeListContent("Mangas", query, 1));
+    loaders.push(
+      contentRepository.searchMyAnimeListContent("Animes", query, 1),
+    );
+    loaders.push(
+      contentRepository.searchMyAnimeListContent("Mangas", query, 1),
+    );
   }
 
   if (env.tmdbBearerToken || env.tmdbApiKey) {
-    loaders.push(contentRepository.searchTmdbContent("Filmes", query, 1));
-    loaders.push(contentRepository.searchTmdbContent("Series", query, 1));
+    loaders.push(
+      contentRepository.searchTmdbContent("Filmes", query, 1, language),
+    );
+    loaders.push(
+      contentRepository.searchTmdbContent("Series", query, 1, language),
+    );
   }
 
   if (env.twitchClientId && env.twitchClientSecret) {
@@ -209,8 +225,8 @@ export const contentService = {
 
     const result =
       query.category === "Todos"
-        ? await loadAll()
-        : await loadCategory(query.category, query.page);
+        ? await loadAll(query.language)
+        : await loadCategory(query.category, query.page, query.language);
 
     // await setCachedJson(cacheKey, result, env.contentCacheTtlSeconds);
     return result;
@@ -222,11 +238,12 @@ export const contentService = {
     }
 
     return searchQuery.category === "Todos"
-      ? searchAll(searchQuery.query)
+      ? searchAll(searchQuery.query, searchQuery.language)
       : searchCategory(
           searchQuery.category,
           searchQuery.query,
           searchQuery.page,
+          searchQuery.language,
         );
   },
 };
